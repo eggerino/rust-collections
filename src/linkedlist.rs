@@ -1,3 +1,12 @@
+// The doubly linked list is designed to have the forward link as a strong/owning link
+// and the backward link as weak/referencing link.
+//
+//                       [PTR, ptr]
+//                         ^    ^
+//   +---------------------+    +-------------------+
+//   v                                              v
+// (nil, x1, PTR) <-> (ptr, x2, PTR) <-> (ptr, x3, NIL)
+
 use std::ptr::NonNull;
 
 struct Node<T> {
@@ -6,6 +15,7 @@ struct Node<T> {
     prev: Option<NonNull<Node<T>>>,
 }
 
+/// A doubly linked list of elements of type `T`.
 pub struct LinkedList<T> {
     len: usize,
     head: Option<Box<Node<T>>>,
@@ -43,6 +53,7 @@ impl<T> Node<T> {
 }
 
 impl<T> LinkedList<T> {
+    /// Creates an empty doubly linked list.
     pub fn new() -> Self {
         Self {
             len: 0,
@@ -51,10 +62,13 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Reads the current amount of elements in the list.
+    /// This operation is O(1) in time.
     pub fn len(&self) -> usize {
         self.len
     }
 
+    /// Inserts the given `value` at the beginning of the list.
     pub fn push_front(&mut self, value: T) {
         self.len += 1;
         let mut node = Node::new(value).to_boxed();
@@ -67,6 +81,8 @@ impl<T> LinkedList<T> {
         self.head = Some(node);
     }
 
+    /// Removes the first element in the list.
+    /// `None` is returned if the list is empty.
     pub fn pop_front(&mut self) -> Option<T> {
         self.head.take().map(|mut head| {
             self.len -= 1;
@@ -80,6 +96,7 @@ impl<T> LinkedList<T> {
         })
     }
 
+    /// Inserts the given `value` at the end of the list.
     pub fn push_back(&mut self, value: T) {
         self.len += 1;
         let node = Node::new(value).to_boxed();
@@ -96,6 +113,8 @@ impl<T> LinkedList<T> {
         }
     }
 
+    /// Removes the last element in the list.
+    /// `None` is returned if the list is empty.
     pub fn pop_back(&mut self) -> Option<T> {
         self.tail.take().map(|tail| {
             self.len -= 1;
