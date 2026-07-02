@@ -193,6 +193,30 @@ impl<T> LinkedList<T> {
     }
 }
 
+impl<T> Default for LinkedList<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: Clone> Clone for LinkedList<T> {
+    fn clone(&self) -> Self {
+        let mut new = Self::new();
+        for x in self.iter() {
+            new.push_back(x.clone());
+        }
+        new
+    }
+}
+
+impl<T> Extend<T> for LinkedList<T> {
+    fn extend<I: IntoIterator<Item = T>>(&mut self, iter: I) {
+        for x in iter {
+            self.push_back(x);
+        }
+    }
+}
+
 impl<T> FromIterator<T> for LinkedList<T> {
     fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
         let mut list = Self::new();
@@ -400,6 +424,35 @@ mod tests {
         assert_eq!(list.pop_back(), None);
         assert_eq!(list.len(), 0);
         assert!(list.is_empty());
+    }
+
+    #[test]
+    fn test_clone() {
+        let list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        let mut other = list.clone();
+
+        assert_eq!(other.len(), 5);
+        assert_eq!(other.pop_front(), Some(1));
+        assert_eq!(other.pop_front(), Some(2));
+        assert_eq!(other.pop_front(), Some(3));
+        assert_eq!(other.pop_front(), Some(4));
+        assert_eq!(other.pop_front(), Some(5));
+    }
+
+    #[test]
+    fn test_extend() {
+        let mut list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        list.extend(vec![6, 7, 8]);
+
+        assert_eq!(list.len(), 8);
+        assert_eq!(list.pop_front(), Some(1));
+        assert_eq!(list.pop_front(), Some(2));
+        assert_eq!(list.pop_front(), Some(3));
+        assert_eq!(list.pop_front(), Some(4));
+        assert_eq!(list.pop_front(), Some(5));
+        assert_eq!(list.pop_front(), Some(6));
+        assert_eq!(list.pop_front(), Some(7));
+        assert_eq!(list.pop_front(), Some(8));
     }
 
     #[test]
