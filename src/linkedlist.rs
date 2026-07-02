@@ -87,6 +87,18 @@ impl<T> LinkedList<T> {
         self.len
     }
 
+    /// Checks if the list is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
+    // Clears the list.
+    pub fn clear(&mut self) {
+        self.len = 0;
+        self.head.take();
+        self.tail.take();
+    }
+
     /// Inserts the given `value` at the beginning of the list.
     pub fn push_front(&mut self, value: T) {
         self.len += 1;
@@ -315,6 +327,7 @@ mod tests {
     fn test_push_pop() {
         let mut list = LinkedList::new();
         assert_eq!(list.len(), 0);
+        assert!(list.is_empty());
 
         // Pop empty list
         assert_eq!(list.pop_front(), None);
@@ -323,6 +336,7 @@ mod tests {
 
         // Push front
         list.push_front(1);
+        assert!(!list.is_empty());
         assert_eq!(list.len(), 1);
         assert_eq!(list.pop_front(), Some(1));
         assert_eq!(list.len(), 0);
@@ -374,6 +388,18 @@ mod tests {
         assert_eq!(list.front_mut(), Some(&mut 1));
         assert_eq!(list.back(), Some(&5));
         assert_eq!(list.back_mut(), Some(&mut 5));
+    }
+
+    #[test]
+    fn test_clear() {
+        let mut list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+
+        assert_eq!(list.len(), 5);
+        list.clear();
+        assert_eq!(list.pop_front(), None);
+        assert_eq!(list.pop_back(), None);
+        assert_eq!(list.len(), 0);
+        assert!(list.is_empty());
     }
 
     #[test]
