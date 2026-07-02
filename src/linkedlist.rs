@@ -7,7 +7,7 @@
 //   v                                              v
 // (nil, x1, PTR) <-> (ptr, x2, PTR) <-> (ptr, x3, NIL)
 
-use std::ptr::NonNull;
+use std::{fmt::Debug, ptr::NonNull};
 
 struct Node<T> {
     value: T,
@@ -277,6 +277,12 @@ impl<T> DoubleEndedIterator for IntoIter<T> {
     }
 }
 
+impl<T: Debug> Debug for LinkedList<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,5 +385,11 @@ mod tests {
 
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next_back(), None);
+    }
+
+    #[test]
+    fn test_debug() {
+        let list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        assert_eq!(format!("{:?}", list), "[1, 2, 3, 4, 5]");
     }
 }
