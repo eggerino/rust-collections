@@ -155,6 +155,30 @@ impl<T> LinkedList<T> {
             tail.value
         })
     }
+
+    /// References the first element in the list.
+    /// `None` is returned if the list is empty.
+    pub fn front(&self) -> Option<&T> {
+        self.head.as_ref().map(|x| &x.value)
+    }
+
+    /// Borrows the first element in the list.
+    /// `None` is returned if the list is empty.
+    pub fn front_mut(&mut self) -> Option<&mut T> {
+        self.head.as_mut().map(|x| &mut x.value)
+    }
+
+    /// References the last element in the list.
+    /// `None` is returned if the list is empty.
+    pub fn back(&self) -> Option<&T> {
+        self.tail.as_ref().map(|x| &unsafe { x.as_ref() }.value)
+    }
+
+    /// Borrows the last element in the list.
+    /// `None` is returned if the list is empty.
+    pub fn back_mut(&mut self) -> Option<&mut T> {
+        self.tail.as_mut().map(|x| &mut unsafe { x.as_mut() }.value)
+    }
 }
 
 impl<T> FromIterator<T> for LinkedList<T> {
@@ -340,6 +364,16 @@ mod tests {
         assert_eq!(list.pop_front(), Some(1));
         assert_eq!(list.pop_front(), Some(2));
         assert_eq!(list.pop_front(), Some(3));
+    }
+
+    #[test]
+    fn test_peeking() {
+        let mut list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+
+        assert_eq!(list.front(), Some(&1));
+        assert_eq!(list.front_mut(), Some(&mut 1));
+        assert_eq!(list.back(), Some(&5));
+        assert_eq!(list.back_mut(), Some(&mut 5));
     }
 
     #[test]
