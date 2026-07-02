@@ -22,6 +22,25 @@ pub struct LinkedList<T> {
     tail: Option<NonNull<Node<T>>>,
 }
 
+/// An referencing iterator over a doubly linked list.
+pub struct Iter<'a, T> {
+    len: usize,
+    head: Option<&'a Node<T>>,
+    tail: Option<&'a Node<T>>,
+}
+
+/// An borrowing iterator over a doubly linked list.
+pub struct IterMut<'a, T> {
+    len: usize,
+    head: Option<&'a mut Node<T>>,
+    tail: Option<NonNull<Node<T>>>,
+}
+
+/// An owning iterator over a doubly linked list.
+pub struct IntoIter<T> {
+    inner: LinkedList<T>,
+}
+
 impl<T> Node<T> {
     fn new(value: T) -> Self {
         Self {
@@ -138,8 +157,128 @@ impl<T> LinkedList<T> {
     }
 }
 
+impl<T> FromIterator<T> for LinkedList<T> {
+    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+        let mut list = Self::new();
+        for x in iter {
+            list.push_back(x);
+        }
+        list
+    }
+}
+
+impl<T> LinkedList<T> {
+    /// Creates a referencing iterator.
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            len: self.len,
+            head: self.head.as_ref().map(Box::as_ref),
+            // SAFETY: Weak pointers within the linked list are always valid.
+            tail: self.tail.as_ref().map(|x| unsafe { x.as_ref() }),
+        }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(head) = self.head.take()
+            && self.len > 0
+        {
+            self.len -= 1;
+            self.head = head.next.as_ref().map(Box::as_ref);
+            Some(&head.value)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(tail) = self.tail.take()
+            && self.len > 0
+        {
+            self.len -= 1;
+            // SAFETY: Weak pointers within the linked list are always valid.
+            self.tail = tail.prev.as_ref().map(|x| unsafe { x.as_ref() });
+            Some(&tail.value)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> LinkedList<T> {
+    /// Creates a borrowing iterator.
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut {
+            len: self.len,
+            head: self.head.as_mut().map(Box::as_mut),
+            tail: self.tail,
+        }
+    }
+}
+
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(head) = self.head.take()
+            && self.len > 0
+        {
+            self.len -= 1;
+            self.head = head.next.as_mut().map(Box::as_mut);
+            Some(&mut head.value)
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, T> DoubleEndedIterator for IterMut<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(mut tail) = self.tail.take()
+            && self.len > 0
+        {
+            self.len -= 1;
+            // SAFETY: Weak pointers within the linked list are always valid.
+            let tail = unsafe { tail.as_mut() };
+            self.tail = tail.prev;
+            Some(&mut tail.value)
+        } else {
+            None
+        }
+    }
+}
+
+impl<T> IntoIterator for LinkedList<T> {
+    type Item = T;
+
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter { inner: self }
+    }
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.pop_front()
+    }
+}
+
+impl<T> DoubleEndedIterator for IntoIter<T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.inner.pop_back()
+    }
+}
+
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
@@ -184,5 +323,61 @@ mod test {
         assert_eq!(list.len(), 1);
         assert_eq!(list.pop_back(), Some(5));
         assert_eq!(list.len(), 0);
+    }
+
+    #[test]
+    fn test_from_iterator() {
+        let v = vec![1, 2, 3];
+        let mut list = LinkedList::from_iter(v);
+
+        assert_eq!(list.len(), 3);
+        assert_eq!(list.pop_front(), Some(1));
+        assert_eq!(list.pop_front(), Some(2));
+        assert_eq!(list.pop_front(), Some(3));
+    }
+
+    #[test]
+    fn test_iter() {
+        let list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        let mut iter = list.iter();
+
+        assert_eq!(iter.next(), Some(&1));
+        assert_eq!(iter.next_back(), Some(&5));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next_back(), Some(&4));
+        assert_eq!(iter.next(), Some(&3));
+
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+    }
+
+    #[test]
+    fn test_iter_mut() {
+        let mut list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        let mut iter = list.iter_mut();
+
+        assert_eq!(iter.next(), Some(&mut 1));
+        assert_eq!(iter.next_back(), Some(&mut 5));
+        assert_eq!(iter.next(), Some(&mut 2));
+        assert_eq!(iter.next_back(), Some(&mut 4));
+        assert_eq!(iter.next(), Some(&mut 3));
+
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
+    }
+
+    #[test]
+    fn test_into_iter() {
+        let list = LinkedList::from_iter(vec![1, 2, 3, 4, 5]);
+        let mut iter = list.into_iter();
+
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next_back(), Some(5));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next_back(), Some(4));
+        assert_eq!(iter.next(), Some(3));
+
+        assert_eq!(iter.next(), None);
+        assert_eq!(iter.next_back(), None);
     }
 }
